@@ -1,7 +1,7 @@
-use crate::math::trit::Trit;
+use crate::{common::direction::Direction};
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct PickedBlock {
     pub position: glam::UVec3,
-    pub direction: [Trit; 3],
+    pub direction: Direction,
 }

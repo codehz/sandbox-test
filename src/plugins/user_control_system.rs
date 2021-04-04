@@ -178,15 +178,30 @@ fn break_block_system(
         None => return,
     };
     for event in mouse_button_event_reader.iter(&mouse_button_events) {
-        if let &MouseButtonEvent {
-            button: MouseButton::Left,
-            state: ElementState::Pressed,
-        } = event
-        {
-            let (chunk_pos, block_sub_pos) = map.size().convert_pos(picked.position).unwrap();
-            log::info!("breaking {} ({} {})", picked.position, chunk_pos, block_sub_pos);
-            map[chunk_pos][block_sub_pos].take();
-            break;
+        if event.state == ElementState::Released {
+            continue;
+        }
+        match event.button {
+            MouseButton::Left => {
+                let (chunk_pos, block_sub_pos) = map.size().convert_pos(picked.position).unwrap();
+                log::info!(
+                    "breaking {} ({} {})",
+                    picked.position,
+                    chunk_pos,
+                    block_sub_pos
+                );
+                map[chunk_pos][block_sub_pos].take();
+            }
+            MouseButton::Right => {
+                if let Some((chunk_pos, block_sub_pos)) = map
+                    .size()
+                    .convert_pos_with_offset(picked.position, picked.direction.into())
+                {
+                    map[chunk_pos][block_sub_pos]
+                        .replace(crate::world::block::constants::YELLOW_BLOCK);
+                }
+            }
+            _ => {}
         }
     }
 }

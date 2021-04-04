@@ -10,7 +10,10 @@ use rayon::prelude::*;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
-use crate::math::aabb::AABB;
+use crate::math::{
+    aabb::AABB,
+    axis::{Axis, ExtractAxis},
+};
 
 use self::{
     block::Block,
@@ -115,6 +118,25 @@ impl MapSize {
             Ok(block_pos) => Some((ChunkPos(cx, cz), block_pos)),
             Err(_) => None,
         }
+    }
+
+    pub fn convert_pos_with_offset(
+        self,
+        pos: glam::UVec3,
+        offset: glam::IVec3,
+    ) -> Option<(ChunkPos, BlockSubPos)> {
+        self.convert_pos(Axis::generate(|axis| {
+            let pos = pos.extract_axis(axis);
+            let off = offset.extract_axis(axis);
+            let dif = match (pos as i32).checked_add(off) {
+                Some(dif) => dif,
+                None => return u32::MAX,
+            };
+            match dif.try_into() {
+                Ok(val) => val,
+                Err(_) => u32::MAX,
+            }
+        }))
     }
 }
 

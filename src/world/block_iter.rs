@@ -1,8 +1,10 @@
 use std::ops::Range;
 
+use strum::IntoEnumIterator;
+
 use crate::{
+    common::direction::Direction,
     math::axis::{Axis, ExtractAxis, HasAxisMut, HasAxisMutExt, MapAxisExt, SortAxisExt},
-    math::trit::Trit,
 };
 
 use super::{
@@ -21,7 +23,7 @@ pub struct BlockIter {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BlockIterResult {
     pub fine_position: glam::UVec3,
-    pub direction: [Trit; 3],
+    pub direction: Direction,
     pub length: f32,
 }
 
@@ -161,26 +163,27 @@ impl BlockIter {
         }
     }
 
-    fn step(&mut self, time: f32) -> [Trit; 3] {
+    fn step(&mut self, time: f32) -> Direction {
         self.length += time;
-        Axis::generate_array(|axis| {
+        let mut dir = None;
+        for axis in Axis::iter() {
             let vel = self.delta.extract_axis(axis);
             if vel.is_infinite() {
-                return Trit::Zero;
+                continue;
             }
             let sig = vel.signum();
             let vel = vel.abs();
             let origin = self.next_offset.extract_axis(axis);
             let next = origin - time;
-            if next < f32::EPSILON {
+            if dir.is_none() && next < f32::EPSILON {
                 self.next_offset.set_axis(axis, vel);
                 self.position.apply_axis(axis, |value| value + sig);
-                (sig > 0.0).into()
+                dir.replace(Direction::from_axis(axis, sig > 0.0));
             } else {
                 self.next_offset.set_axis(axis, next);
-                Default::default()
             }
-        })
+        }
+        dir.unwrap()
     }
 }
 
