@@ -169,7 +169,6 @@ fn handle_paused_game(
 fn break_block_system(
     picked: Res<Option<PickedBlock>>,
     mut map: ResMut<Map>,
-    camera: Res<Camera>,
     mouse_button_events: Res<Events<MouseButtonEvent>>,
     mut mouse_button_event_reader: Local<EventReader<MouseButtonEvent>>,
 ) {
@@ -201,9 +200,6 @@ fn break_block_system(
                     map[chunk_pos][block_sub_pos]
                         .replace(crate::world::block::constants::YELLOW_BLOCK);
                 }
-            }
-            MouseButton::Middle => {
-                log::info!("picked: {:?} eye: {} dir: {}", picked, camera.eye, camera.get_direction());
             }
             _ => {}
         }
