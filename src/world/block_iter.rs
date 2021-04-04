@@ -115,12 +115,12 @@ fn get_next_offset_delta(
     let delta = 1.0 / direction;
     let arr = Axis::generate_array(|axis| {
         let pos = origin.extract_axis(axis);
-        let dir = direction.extract_axis(axis);
+        let dir = direction.extract_axis(axis).signum();
         let whole_time = delta.extract_axis(axis);
-        let next_frame = if dir >= 0.0 {
+        let next_frame = if pos.fract() == 0.0 {
+            pos + dir
+        } else if dir >= 0.0 {
             pos.ceil()
-        } else if pos.fract() == 0.0 {
-            pos - 1.0
         } else {
             pos.floor()
         };
@@ -346,5 +346,35 @@ mod tests {
             iter.next().unwrap().get_position(),
             (ChunkPos(0, 0), BlockSubPos::new(0, 0, 1))
         );
+    }
+
+    #[test]
+    fn test_bug() {
+        let mut iter = BlockIter::new(
+            MapSize::new((1, 1)),
+            glam::vec3a(5.0, 5.0, 5.0),
+            glam::vec3a(-0.3, 0.0, 0.12),
+        );
+        assert_eq!(
+            iter.next().unwrap().get_position(),
+            (ChunkPos(0, 0), BlockSubPos::new(3, 5, 5))
+        );
+        assert_eq!(
+            iter.next().unwrap().get_position(),
+            (ChunkPos(0, 0), BlockSubPos::new(2, 5, 5))
+        );
+        assert_eq!(
+            iter.next().unwrap().get_position(),
+            (ChunkPos(0, 0), BlockSubPos::new(2, 5, 6))
+        );
+        assert_eq!(
+            iter.next().unwrap().get_position(),
+            (ChunkPos(0, 0), BlockSubPos::new(1, 5, 6))
+        );
+        assert_eq!(
+            iter.next().unwrap().get_position(),
+            (ChunkPos(0, 0), BlockSubPos::new(0, 5, 6))
+        );
+        assert_eq!(iter.next(), None);
     }
 }
