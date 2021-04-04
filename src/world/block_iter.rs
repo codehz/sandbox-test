@@ -326,6 +326,14 @@ mod tests {
         );
         assert_eq!(
             iter.next().unwrap().get_position(),
+            (ChunkPos(0, 0), BlockSubPos::new(1, 0, 0))
+        );
+        assert_eq!(
+            iter.next().unwrap().get_position(),
+            (ChunkPos(0, 0), BlockSubPos::new(1, 1, 0))
+        );
+        assert_eq!(
+            iter.next().unwrap().get_position(),
             (ChunkPos(0, 0), BlockSubPos::new(1, 1, 1))
         );
 
