@@ -184,6 +184,7 @@ fn break_block_system(
         } = event
         {
             let (chunk_pos, block_sub_pos) = map.size().convert_pos(picked.position).unwrap();
+            log::info!("breaking {} ({} {})", picked.position, chunk_pos, block_sub_pos);
             map[chunk_pos][block_sub_pos].take();
             break;
         }

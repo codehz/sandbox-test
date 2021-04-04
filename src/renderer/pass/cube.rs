@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use rayon::prelude::*;
 use std::{collections::BTreeMap, time::Instant};
 
@@ -147,35 +148,41 @@ impl Pass for CubePass {
 
     fn prepare(&mut self, context: PassContext, display: &glium::Display) {
         let map = context.map();
-        for (chunk_pos, chunk) in map.iter() {
-            let cached = self.chunk_cache.entry(chunk_pos);
-            let mut dirty = chunk.dirty()
-                || map
-                    .iter_neighbor(chunk_pos)
-                    .any(|(_, neighbor)| neighbor.dirty());
-            let cache = cached.or_insert_with(|| {
-                dirty = true;
-                VertexCache::new(display, Chunk::max_face_count())
-            });
-            if dirty {
-                let now = Instant::now();
-                let data: Vec<_> = chunk
-                    .par_iter_solid()
-                    .flat_map_iter(|(block_pos, color)| {
-                        Direction::iter().map(move |direction| (block_pos, color, direction))
-                    })
-                    .filter_map(|(block_pos, color, direction)| {
-                        gen_face(&*map, chunk_pos, chunk, color, block_pos, direction)
-                    })
-                    .collect();
-                let mut writer = VertexWriter::new(cache);
-                for face in data {
-                    writer.write(face);
+        map.iter()
+            .filter_map(|(chunk_pos, chunk)| {
+                let cached = self.chunk_cache.entry(chunk_pos);
+                let mut dirty = chunk.dirty()
+                    || map
+                        .iter_neighbor(chunk_pos)
+                        .any(|(_, neighbor)| neighbor.dirty());
+                let cache = cached.or_insert_with(|| {
+                    dirty = true;
+                    VertexCache::new(display, Chunk::max_face_count())
+                });
+                if dirty {
+                    let now = Instant::now();
+                    let data: Vec<_> = chunk
+                        .par_iter_solid()
+                        .flat_map_iter(|(block_pos, color)| {
+                            Direction::iter().map(move |direction| (block_pos, color, direction))
+                        })
+                        .filter_map(|(block_pos, color, direction)| {
+                            gen_face(&*map, chunk_pos, chunk, color, block_pos, direction)
+                        })
+                        .collect();
+                    let mut writer = VertexWriter::new(cache);
+                    for face in data {
+                        writer.write(face);
+                    }
+                    log::info!("render chunk@{:?} took {:?}", chunk_pos, now.elapsed());
+                    Some(chunk)
+                } else {
+                    None
                 }
-                chunk.mark_clean();
-                log::info!("render chunk@{:?} took {:?}", chunk_pos, now.elapsed());
-            }
-        }
+            })
+            .collect_vec()
+            .iter()
+            .for_each(|x| (**x).mark_clean());
     }
 
     fn process(
