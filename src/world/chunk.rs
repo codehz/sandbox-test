@@ -12,7 +12,7 @@ use crate::common::{color::Color, direction::Direction};
 
 use super::block::{Block, BlockType};
 
-const WIDTH: usize = 16;
+const WIDTH: usize = 8;
 const HEIGHT: usize = 64;
 
 pub const CHUNK_SIZE: usize = WIDTH * WIDTH * HEIGHT;
