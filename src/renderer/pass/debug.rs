@@ -26,7 +26,9 @@ impl Pass for DebugPass {
         provider: &SurfaceProvider,
         display: &glium::Display,
     ) -> anyhow::Result<()> {
-        let (color, normal, position) = provider.get_buffer().get_gbuffer_sampled();
+        let group = provider.get_buffer();
+        let (color, normal, position) = group.get_gbuffer_sampled();
+        let sprite = group.get_sprite_sampled();
         let mut surface = display.draw();
         surface.clear_color(0.0, 0.0, 0.0, 1.0);
         let (vertex, index) = (&self.buffer).into();
@@ -34,6 +36,7 @@ impl Pass for DebugPass {
             color_sample: color,
             normal_sample: normal,
             position_sample: position,
+            sprite_sample: sprite,
         };
         let draw_parameters = Default::default();
         surface.draw(vertex, index, &self.program, &uniforms, &draw_parameters)?;

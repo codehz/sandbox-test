@@ -4,6 +4,12 @@ use strum::IntoEnumIterator;
 
 use super::axis::{Axis, ExtractAxis, HasAxisMut, MapAxisExt};
 
+pub trait IntoAABB {
+    fn into_aabb<T>(&self, position: T) -> AABB
+    where
+        T: Into<glam::Vec3A>;
+}
+
 #[derive(Debug, Default, Clone, Copy)]
 pub struct AABB {
     pub position: glam::Vec3A,

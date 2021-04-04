@@ -2,6 +2,7 @@ use self::{buffers::SurfaceProvider, events::*, pass::Pass};
 use bevy_app::{App, AppExit, EventReader, Events, Plugin};
 use bevy_ecs::{IntoSystem, Local, Res, ResMut};
 use glium::glutin::{self, event::KeyboardInput};
+use pass::PassContext;
 
 pub mod buffers;
 pub mod camera;
@@ -100,7 +101,7 @@ impl<P: Pass + 'static> RenderPlugin<P> {
                     provider
                         .verify(&display)
                         .expect("Failed to resize framebuffer");
-                    let context = (&app).into();
+                    let context = PassContext::create(&app, &display);
                     pass.prepare(context, &display);
                     pass.process(context, &provider, &display).unwrap();
                 }

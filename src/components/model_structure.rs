@@ -1,4 +1,4 @@
-use crate::math::aabb::AABB;
+use crate::math::aabb::{IntoAABB, AABB};
 
 #[derive(Debug, Clone, Copy)]
 pub struct ModelStructure {
@@ -8,7 +8,14 @@ pub struct ModelStructure {
 }
 
 impl ModelStructure {
-    pub fn get_aabb<T>(&self, position: T) -> AABB
+    pub fn get_extent(&self) -> glam::Vec2 {
+        let &Self { width, height, .. } = self;
+        glam::vec2(width, height)
+    }
+}
+
+impl IntoAABB for ModelStructure {
+    fn into_aabb<T>(&self, position: T) -> AABB
     where
         T: Into<glam::Vec3A>,
     {
@@ -17,10 +24,5 @@ impl ModelStructure {
             position: position.into() - glam::vec3a(width / 2.0, 0.0, width / 2.0),
             extent3d: glam::vec3a(width, height, width),
         }
-    }
-
-    pub fn get_extent(&self) -> glam::Vec2 {
-        let &Self { width, height, .. } = self;
-        glam::vec2(width, height)
     }
 }

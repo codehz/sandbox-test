@@ -5,7 +5,7 @@ use bevy_reflect::ReflectPlugin;
 use sandbox_test as lib;
 
 use lib::{
-    components::{EntityBundle, ModelStructure, UserControl},
+    components::{EntityBundle, ModelStructure, ReceiveGravity, UserControl},
     pipeline, plugins,
     renderer::{self, pass::*, RenderPlugin},
 };
@@ -23,6 +23,7 @@ fn startup(commands: &mut Commands) {
                 head_offset: 1.2,
             },
         })
+        .with(ReceiveGravity)
         .with(UserControl::default());
 }
 struct GamePlugin;
@@ -69,6 +70,7 @@ pub fn main() {
         .add_plugin(RenderPlugin::<
             pipeline!(
                 cube::CubePass,
+                sprite::SpritePass,
                 // debug::DebugPass,
                 outline::OutlinePass,
                 strengthen::StrengthenPass

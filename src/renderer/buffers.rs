@@ -3,6 +3,7 @@ use std::cell::RefCell;
 use glium::uniforms::Sampler;
 
 pub struct TextureGroup {
+    pub sprite: glium::texture::Texture2d,
     pub color: glium::texture::Texture2d,
     pub normal: glium::texture::Texture2d,
     pub position: glium::texture::Texture2d,
@@ -15,6 +16,13 @@ pub struct TextureGroup {
 impl TextureGroup {
     fn new(disp: &glium::Display, (width, height): (u32, u32)) -> anyhow::Result<Self> {
         Ok(Self {
+            sprite: glium::texture::Texture2d::empty_with_format(
+                disp,
+                glium::texture::UncompressedFloatFormat::F32F32F32F32,
+                glium::texture::MipmapsOption::NoMipmap,
+                width,
+                height,
+            )?,
             color: glium::texture::Texture2d::empty_with_format(
                 disp,
                 glium::texture::UncompressedFloatFormat::U8U8U8U8,
@@ -69,6 +77,14 @@ impl TextureGroup {
         })
     }
 
+    fn get_sprite_surface<'a>(
+        &'a self,
+        display: &glium::Display,
+    ) -> Result<glium::framebuffer::SimpleFrameBuffer<'a>, glium::framebuffer::ValidationError>
+    {
+        glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(display, &self.sprite, &self.depth)
+    }
+
     fn get_gbuffer_surface<'a>(
         &'a self,
         display: &glium::Display,
@@ -100,6 +116,15 @@ impl TextureGroup {
             color_attachments.iter().cloned(),
             &self.depth,
         )
+    }
+
+    pub fn get_sprite_sampled(&self) -> Sampler<'_, glium::Texture2d> {
+        use glium::uniforms::*;
+        self.sprite
+            .sampled()
+            .minify_filter(MinifySamplerFilter::Nearest)
+            .magnify_filter(MagnifySamplerFilter::Nearest)
+            .wrap_function(SamplerWrapFunction::Clamp)
     }
 
     pub fn get_gbuffer_sampled(
@@ -190,6 +215,14 @@ impl SurfaceProvider {
             self.dimensions = dimensions;
         }
         Ok(())
+    }
+
+    pub fn get_sprite_surface<'a, 'display>(
+        &'a self,
+        display: &'display glium::Display,
+    ) -> anyhow::Result<glium::framebuffer::SimpleFrameBuffer<'a>> {
+        let surface = self.buffer.get_sprite_surface(display)?;
+        Ok(surface)
     }
 
     pub fn get_gbuffer_surface<'a, 'display>(

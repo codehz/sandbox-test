@@ -193,13 +193,6 @@ impl Pass for CubePass {
     ) -> anyhow::Result<()> {
         let mut frame = provider.get_gbuffer_surface(display)?;
         frame.clear_color_and_depth((0.0, 0.0, 0.0, 1.0), 1.0);
-        let aspect_ratio = {
-            let dim = frame.get_dimensions();
-            dim.0 as f32 / dim.1 as f32
-        };
-        let camera = context.camera();
-        let view_model = camera.view_model().to_cols_array_2d();
-        let perspective = camera.perspective(aspect_ratio).to_cols_array_2d();
 
         let picked_block = if let Some(picked) = *context.get_res::<Option<PickedBlock>>() {
             picked.into()
@@ -211,8 +204,8 @@ impl Pass for CubePass {
         let picked_block = glium::uniforms::UniformBuffer::new(display, picked_block)?;
 
         let uniforms = uniform! {
-            view_model: view_model,
-            perspective: perspective,
+            view_model: context.view_model,
+            perspective: context.perspective,
             picked: &picked_block,
         };
 

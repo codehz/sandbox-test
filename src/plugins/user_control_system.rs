@@ -1,8 +1,9 @@
 use bevy_app::{stage, EventReader, Events, Plugin};
-use bevy_ecs::{IntoSystem, Local, Query, Res, ResMut, State, StateStage};
+use bevy_ecs::{Commands, IntoSystem, Local, Query, Res, ResMut, State, StateStage};
 
 use crate::{
-    components::{HeadPitch, ModelStructure, Position, Rotation, UserControl},
+    common::color,
+    components::{HeadPitch, ModelStructure, Position, Rotation, Sprite, UserControl, Velocity},
     renderer::{camera::Camera, events::*, Action},
     resources::{ControlConfig, KeyboardTracing, PickedBlock},
     world::{
@@ -230,6 +231,34 @@ fn picking_system(mut picked: ResMut<Option<PickedBlock>>, map: Res<Map>, camera
         });
 }
 
+fn generate_sprite_system(
+    mouse_button_events: Res<Events<MouseButtonEvent>>,
+    mut mouse_button_event_reader: Local<EventReader<MouseButtonEvent>>,
+    commands: &mut Commands,
+    camera: Res<Camera>,
+) {
+    for event in mouse_button_event_reader.iter(&mouse_button_events) {
+        if event.state == ElementState::Released {
+            continue;
+        }
+        match event.button {
+            MouseButton::Middle => {
+                let dir = camera.get_direction();
+                let pos = camera.eye;
+                commands.spawn((
+                    Sprite {
+                        color: color::RED,
+                        radius: 0.5,
+                    },
+                    Position(pos),
+                    Velocity(dir * 0.1),
+                ));
+            }
+            _ => {}
+        }
+    }
+}
+
 pub struct UserInputPlugin;
 
 impl Plugin for UserInputPlugin {
@@ -239,6 +268,7 @@ impl Plugin for UserInputPlugin {
             .on_state_enter(UserInputState::Enabled, state_transition::<true>.system())
             .on_state_update(UserInputState::Enabled, picking_system.system())
             .on_state_update(UserInputState::Enabled, handle_in_game.system())
+            .on_state_update(UserInputState::Enabled, generate_sprite_system.system())
             .on_state_update(UserInputState::Enabled, break_block_system.system())
             .on_state_update(UserInputState::Enabled, tracing_keyboard_system.system())
             .on_state_update(UserInputState::Enabled, user_input_system.system())

@@ -2,13 +2,20 @@ use std::ops::Add;
 
 use bevy_app::{stage, EventReader, Events, Plugin};
 use bevy_core::{Time, Timer};
-use bevy_ecs::{Commands, Entity, IntoSystem, Local, Query, Res, ResMut, SystemStage, Without};
+use bevy_ecs::{
+    Commands, Entity, IntoSystem, Local, Query, Res, ResMut, SystemStage, With, Without,
+};
 
 use crate::{
-    components::{HeadPitch, ModelStructure, Position, Rotation, UserControl, Velocity},
+    components::{
+        HeadPitch, ModelStructure, Position, ReceiveGravity, Rotation, Sprite, UserControl,
+        Velocity,
+    },
     math::{
-        aabb::AABB,
-        axis::{DiffAxisExt, ExtractAxis, HasAxis, HasAxisMut, MapAxisExt, SortAxisExt},
+        aabb::{IntoAABB, AABB},
+        axis::{
+            DiffAxisExt, ExtractAxis, HasAxis, HasAxisMut, HasAxisMutExt, MapAxisExt, SortAxisExt,
+        },
         bound3d::{Bound3D, LimitRange},
         voxel_bound::VoxelBound,
     },
@@ -118,13 +125,52 @@ fn player_velocity_system(
 fn gravity_system(
     timer_events: Res<Events<PhysicsTick>>,
     mut timer_event_reader: Local<EventReader<PhysicsTick>>,
-    mut query: Query<&mut Velocity>,
+    mut query: Query<&mut Velocity, With<ReceiveGravity>>,
 ) {
     if timer_event_reader.latest(&timer_events).is_none() {
         return;
     }
     for mut vel in query.iter_mut() {
         vel.0 += glam::vec3a(0.0, -0.01, 0.0);
+    }
+}
+
+fn sprite_collision_system(
+    timer_events: Res<Events<PhysicsTick>>,
+    mut timer_event_reader: Local<EventReader<PhysicsTick>>,
+    map: Res<Map>,
+    mut query: Query<(&mut PhysicsPosition, &mut Velocity, &mut Bound3D, &Sprite)>,
+) {
+    if timer_event_reader.latest(&timer_events).is_none() {
+        return;
+    }
+    let map_bound = Bound3D::from_world(&map.size());
+    for (mut pos, mut vel, mut cached_bound, &sprite) in query.iter_mut() {
+        *cached_bound = Default::default();
+        for axis in vel.sort_axis(|a, b| a.abs() > b.abs()) {
+            let vel_axis = vel.extract_axis(axis);
+            let next_pos: glam::Vec3A = pos.adjust_axis(axis, |val| val + vel_axis);
+            // let aabb = sprite.into_aabb(next_pos);
+            // let mut voxel_bound = VoxelBound::default();
+            // for (target, blk) in map.scan_aabb(aabb) {
+            //     match blk.data {
+            //         crate::world::block::BlockType::Solid { .. } => {}
+            //     }
+            //     let overlapped = AABB::from_block_pos(target) ^ aabb;
+            //     let tmp = VoxelBound::from_aabb_axis(overlapped, axis);
+            //     voxel_bound.merge(tmp);
+            // }
+            // let bound = {
+            //     let mut ret = map_bound;
+            //     ret.limit(axis, Into::<std::ops::Range<_>>::into(voxel_bound));
+            //     ret.shrink_by(glam::Vec2::splat(sprite.radius * 2.0))
+            // };
+            *cached_bound &= map_bound;
+            *pos = map_bound.apply(next_pos);
+            if pos.extract_axis(axis) != next_pos.extract_axis(axis) {
+                vel.apply_axis(axis, |x| -x);
+            }
+        }
     }
 }
 
@@ -144,16 +190,13 @@ fn map_collision_detection(
     }
     let map_bound = Bound3D::from_world(&map.size());
     for (mut pos, mut vel, mut cached_bound, &structure) in query.iter_mut() {
-        if vel.0.eq_axis(&glam::Vec3A::ZERO).iter().all(|x| *x) {
-            continue;
-        }
         let extent = structure.get_extent();
         *cached_bound = Default::default();
         for axis in vel.sort_axis(|a, b| a.abs() > b.abs()) {
             let vel_axis = vel.extract_axis(axis);
             let next_pos: glam::Vec3A = pos.adjust_axis(axis, |val| val + vel_axis);
             let aabb = structure
-                .get_aabb(next_pos)
+                .into_aabb(next_pos)
                 .expanded(glam::vec3a(0.01, 0.0, 0.01));
             let mut voxel_bound = VoxelBound::default();
             for (target, blk) in map.scan_aabb(aabb) {
@@ -189,6 +232,7 @@ impl Plugin for PhysicsPlugin {
             .add_stage_before(stage::UPDATE, PHYSICS_SIMULATION, SystemStage::serial())
             .add_system_to_stage(PHYSICS_SIMULATION, physics_tick_system.system())
             .add_system_to_stage(PHYSICS_SIMULATION, gravity_system.system())
+            .add_system_to_stage(PHYSICS_SIMULATION, sprite_collision_system.system())
             .add_system_to_stage(PHYSICS_SIMULATION, map_collision_detection.system())
             .add_system_to_stage(PHYSICS_SIMULATION, sync_position_system.system())
             .add_system_to_stage(PHYSICS_SIMULATION, player_velocity_system.system());

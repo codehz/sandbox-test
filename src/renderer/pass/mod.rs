@@ -8,13 +8,18 @@ use hlist::{Cons, Nil};
 pub mod cube;
 pub mod debug;
 pub mod outline;
+pub mod sprite;
 pub mod strengthen;
+
 mod pp;
 
 #[derive(Clone, Copy)]
 pub struct PassContext<'a> {
     pub resources: &'a bevy_ecs::Resources,
     pub world: &'a bevy_ecs::World,
+    pub view_model: [[f32; 4]; 4],
+    pub perspective: [[f32; 4]; 4],
+    pub aspect_ratio: f32,
 }
 
 impl<'a> PassContext<'a> {
@@ -35,12 +40,21 @@ impl<'a> PassContext<'a> {
     }
 }
 
-impl<'a> From<&'a App> for PassContext<'a> {
-    #[inline(always)]
-    fn from(app: &'a App) -> Self {
+impl<'a> PassContext<'a> {
+    pub fn create(app: &'a App, display: &glium::Display) -> Self {
+        let aspect_ratio = {
+            let dim = display.get_framebuffer_dimensions();
+            dim.0 as f32 / dim.1 as f32
+        };
+        let camera: ResourceRef<Camera> = app.resources.get().unwrap();
+        let view_model = camera.view_model().to_cols_array_2d();
+        let perspective = camera.perspective(aspect_ratio).to_cols_array_2d();
         Self {
             resources: &app.resources,
             world: &app.world,
+            view_model,
+            perspective,
+            aspect_ratio,
         }
     }
 }

@@ -41,6 +41,7 @@ impl Pass for StrengthenPass {
                 far: range.end,
             }
         };
+        let sprite = provider.get_buffer().get_sprite_sampled();
         let camera_block = glium::uniforms::UniformBuffer::new(display, strengthen)?;
         let color = provider.get_last_postprocess_sample();
         let altdepth = provider.get_aux_sample();
@@ -50,6 +51,7 @@ impl Pass for StrengthenPass {
         let uniforms = uniform! {
             color_sample: color,
             aux_sample: altdepth,
+            sprite_sample: sprite,
             block: &camera_block,
         };
         let draw_parameters = Default::default();

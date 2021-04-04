@@ -2,6 +2,7 @@
 
 layout(location = 0) uniform sampler2D color_sample;
 layout(location = 1) uniform sampler2D aux_sample;
+layout(location = 2) uniform sampler2D sprite_sample;
 layout(binding = 0, std140) uniform block { float near, far; };
 layout(location = 0) out vec3 color;
 
@@ -14,6 +15,11 @@ const vec2 iResolution = textureSize(color_sample, 0);
 const vec2 uv = gl_FragCoord.xy / iResolution.xy;
 const vec2 Radius = vec2(Size * iResolution.y / iResolution.x, Size);
 
+vec3 fetchSprite(vec2 off) {
+  vec2 resolution = textureSize(sprite_sample, 0);
+  return texture(sprite_sample, vec2(gl_FragCoord.xy + off) / resolution).xyz;
+}
+
 float rand(vec2 co) {
   return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
 }
@@ -21,6 +27,7 @@ float rand(vec2 co) {
 vec3 colorSample(in vec2 pos, in float r) {
   vec3 curcolor = texture2D(color_sample, pos).rgb;
   vec2 zx = texture2D(aux_sample, pos).rg;
+  vec4 sprite = texture2D(sprite_sample, pos);
   float z = zx.r;
   float z_filter = float(z > 0);
   float rz = z_filter * (1.0 - smoothstep(near, far, z));
@@ -28,7 +35,7 @@ vec3 colorSample(in vec2 pos, in float r) {
   float rz2 = pow(rz, 2.0);
   return mix(curcolor * r2 * 1.5, curcolor * 1.0 / Quality * rz2 * r,
              smoothstep(rz2, rz2 + 0.1, r)) +
-         (curcolor * z_filter * zx.g * 2);
+         (curcolor * z_filter * zx.g * 2) + sprite.rgb * pow(sprite.w, 1.5);
 }
 
 void main() {
