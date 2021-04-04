@@ -264,7 +264,7 @@ mod tests {
             let direction = direction.normalize();
             assert_eq!(
                 get_origin_point(size, position, direction),
-                Some((glam::vec3a(15.5, 64.0, 15.5), 1.2247449))
+                Some((glam::vec3a(7.5, 64.0, 7.5), 1.2247449))
             );
         }
         {
