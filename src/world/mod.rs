@@ -94,7 +94,7 @@ impl MapSize {
         ChunkNeighbor::iter().filter_map(move |dir| pos.get_neighbor(self, dir))
     }
 
-    fn convert_pos(self, pos: glam::UVec3) -> Option<(ChunkPos, BlockSubPos)> {
+    pub fn convert_pos(self, pos: glam::UVec3) -> Option<(ChunkPos, BlockSubPos)> {
         if pos.y.check_range(0..(Chunk::HEIGHT as u32)).is_err() {
             return None;
         }

@@ -166,6 +166,30 @@ fn handle_paused_game(
     }
 }
 
+fn break_block_system(
+    picked: Res<Option<PickedBlock>>,
+    mut map: ResMut<Map>,
+    mouse_button_events: Res<Events<MouseButtonEvent>>,
+    mut mouse_button_event_reader: Local<EventReader<MouseButtonEvent>>,
+) {
+    use glium::glutin::event::*;
+    let picked = match *picked {
+        Some(picked) => picked,
+        None => return,
+    };
+    for event in mouse_button_event_reader.iter(&mouse_button_events) {
+        if let &MouseButtonEvent {
+            button: MouseButton::Left,
+            state: ElementState::Pressed,
+        } = event
+        {
+            let (chunk_pos, block_sub_pos) = map.size().convert_pos(picked.position).unwrap();
+            map[chunk_pos][block_sub_pos].take();
+            break;
+        }
+    }
+}
+
 fn picking_system(mut picked: ResMut<Option<PickedBlock>>, map: Res<Map>, camera: Res<Camera>) {
     let position = camera.eye;
     let direction = camera.get_direction();
@@ -199,6 +223,7 @@ impl Plugin for UserInputPlugin {
             .on_state_enter(UserInputState::Enabled, state_transition::<true>.system())
             .on_state_update(UserInputState::Enabled, picking_system.system())
             .on_state_update(UserInputState::Enabled, handle_in_game.system())
+            .on_state_update(UserInputState::Enabled, break_block_system.system())
             .on_state_update(UserInputState::Enabled, tracing_keyboard_system.system())
             .on_state_update(UserInputState::Enabled, user_input_system.system())
             .on_state_exit(UserInputState::Enabled, reset_user_input_system.system())
