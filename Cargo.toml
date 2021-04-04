@@ -1,0 +1,27 @@
+[package]
+name = "sandbox-test"
+version = "0.1.0"
+authors = ["CodeHz <codehz@outlook.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+env_logger = "0.8.3"
+lazy_static = "1.4.0"
+log = "0.4.14"
+enum-map = "0.6.4"
+strum = "0.20.0"
+strum_macros = "0.20.1"
+glam = "0.13.1"
+glium = "0.29.0"
+anyhow = "1.0.39"
+range_check = "0.2.0"
+hlist = "0.1.2"
+bevy_ecs = "0.4"
+bevy_app = "0.4"
+bevy_reflect = "0.4.0"
+bevy_core = "0.4.0"
+rayon = "1.5.0"
+itertools = "0.10.0"
+noise = "0.7.0"
