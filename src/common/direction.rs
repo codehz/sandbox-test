@@ -3,7 +3,7 @@ use strum_macros::EnumIter;
 
 use crate::math::axis::Axis;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Enum, EnumIter)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash, Ord, Enum, EnumIter)]
 pub enum Direction {
     North, // Z-
     South, // Z+

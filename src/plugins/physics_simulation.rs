@@ -1,10 +1,8 @@
 use std::ops::Add;
 
-use bevy_app::{stage, EventReader, Events, Plugin};
+use bevy_app::{CoreStage, Plugin};
 use bevy_core::{Time, Timer};
-use bevy_ecs::{
-    Commands, Entity, IntoSystem, Local, Query, Res, ResMut, SystemStage, With, Without,
-};
+use bevy_ecs::{prelude::*, schedule::ShouldRun};
 
 use crate::{
     components::{
@@ -59,15 +57,11 @@ impl HasAxisMut for PhysicsPosition {
 
 struct PhysicsTimer(Timer);
 
-struct PhysicsTick;
-
-fn physics_tick_system(
-    mut events: ResMut<Events<PhysicsTick>>,
-    time: Res<Time>,
-    mut timer: ResMut<PhysicsTimer>,
-) {
-    if timer.0.tick(time.delta_seconds()).just_finished() {
-        events.send(PhysicsTick);
+fn physics_tick_system(time: Res<Time>, mut timer: ResMut<PhysicsTimer>) -> ShouldRun {
+    if timer.0.tick(time.delta()).just_finished() {
+        ShouldRun::Yes
+    } else {
+        ShouldRun::No
     }
 }
 
@@ -76,23 +70,20 @@ fn sync_position_system(
     timer: Res<PhysicsTimer>,
     mut has_physics_position: Query<(&mut Position, &Bound3D, &Velocity, &PhysicsPosition)>,
     no_physics_position: Query<(Entity, &Position), Without<PhysicsPosition>>,
-    commands: &mut Commands,
+    mut commands: Commands,
 ) {
     let percent = timer.0.percent();
     for (mut pos, bound, vel, phys) in has_physics_position.iter_mut() {
         *pos = bound.apply(phys.0 + vel.0 * percent)
     }
     for (entity, &pos) in no_physics_position.iter() {
-        commands.insert(
-            entity,
-            (PhysicsPosition::from(pos), Bound3D::from_world(&map.size())),
-        );
+        commands
+            .entity(entity)
+            .insert_bundle((PhysicsPosition::from(pos), Bound3D::from_world(&map.size())));
     }
 }
 
 fn player_velocity_system(
-    timer_events: Res<Events<PhysicsTick>>,
-    mut timer_event_reader: Local<EventReader<PhysicsTick>>,
     mut query: Query<(
         &mut Velocity,
         &mut Rotation,
@@ -100,9 +91,6 @@ fn player_velocity_system(
         &mut UserControl,
     )>,
 ) {
-    if timer_event_reader.latest(&timer_events).is_none() {
-        return;
-    }
     for (mut vel, mut rot, mut pitch, mut ctrl) in query.iter_mut() {
         let crot = ctrl.rotation;
         ctrl.rotation = glam::vec2(0.0, 0.0);
@@ -120,34 +108,22 @@ fn player_velocity_system(
     }
 }
 
-fn gravity_system(
-    timer_events: Res<Events<PhysicsTick>>,
-    mut timer_event_reader: Local<EventReader<PhysicsTick>>,
-    mut query: Query<&mut Velocity, With<ReceiveGravity>>,
-) {
-    if timer_event_reader.latest(&timer_events).is_none() {
-        return;
-    }
+fn gravity_system(mut query: Query<&mut Velocity, With<ReceiveGravity>>) {
     for mut vel in query.iter_mut() {
         vel.0 += glam::vec3a(0.0, -0.01, 0.0);
     }
 }
 
 fn sprite_collision_system(
-    timer_events: Res<Events<PhysicsTick>>,
-    mut timer_event_reader: Local<EventReader<PhysicsTick>>,
     map: Res<Map>,
     mut query: Query<(Entity, &mut PhysicsPosition, &Velocity, &Sprite)>,
-    commands: &mut Commands,
+    mut commands: Commands,
 ) {
-    if timer_event_reader.latest(&timer_events).is_none() {
-        return;
-    }
     let map_bound = Bound3D::from_world(&map.size());
     'outer: for (entity, mut pos, vel, &sprite) in query.iter_mut() {
         let next_pos = pos.0 + vel.0;
         if map_bound.out_of_bound(next_pos) {
-            commands.despawn(entity);
+            commands.entity(entity).despawn();
             continue 'outer;
         }
         let aabb = sprite.into_aabb(next_pos);
@@ -155,7 +131,7 @@ fn sprite_collision_system(
             match blk.data {
                 crate::world::block::BlockType::Solid { .. } => {}
             }
-            commands.despawn(entity);
+            commands.entity(entity).despawn();
             continue 'outer;
         }
         pos.0 = next_pos;
@@ -163,8 +139,6 @@ fn sprite_collision_system(
 }
 
 fn map_collision_detection(
-    timer_events: Res<Events<PhysicsTick>>,
-    mut timer_event_reader: Local<EventReader<PhysicsTick>>,
     map: Res<Map>,
     mut query: Query<(
         &mut PhysicsPosition,
@@ -173,9 +147,6 @@ fn map_collision_detection(
         &ModelStructure,
     )>,
 ) {
-    if timer_event_reader.latest(&timer_events).is_none() {
-        return;
-    }
     let map_bound = Bound3D::from_world(&map.size());
     for (mut pos, mut vel, mut cached_bound, &structure) in query.iter_mut() {
         let extent = structure.get_extent();
@@ -213,16 +184,47 @@ static PHYSICS_SIMULATION: &str = "physics simulation";
 
 pub struct PhysicsPlugin;
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemLabel)]
+pub enum PhysicsLabel {
+    SyncPosition,
+    Gravity,
+    Collision,
+    PlayerVelocity,
+}
+
 impl Plugin for PhysicsPlugin {
     fn build(&self, appb: &mut bevy_app::AppBuilder) {
-        appb.add_resource(PhysicsTimer(Timer::from_seconds(0.025, true)))
-            .add_event::<PhysicsTick>()
-            .add_stage_before(stage::UPDATE, PHYSICS_SIMULATION, SystemStage::serial())
-            .add_system_to_stage(PHYSICS_SIMULATION, physics_tick_system.system())
-            .add_system_to_stage(PHYSICS_SIMULATION, gravity_system.system())
-            .add_system_to_stage(PHYSICS_SIMULATION, sprite_collision_system.system())
-            .add_system_to_stage(PHYSICS_SIMULATION, map_collision_detection.system())
-            .add_system_to_stage(PHYSICS_SIMULATION, sync_position_system.system())
-            .add_system_to_stage(PHYSICS_SIMULATION, player_velocity_system.system());
+        let mut stage = SystemStage::parallel().with_run_criteria(physics_tick_system.system());
+        stage
+            .add_system(gravity_system.system().label(PhysicsLabel::Gravity))
+            .add_system(
+                sprite_collision_system
+                    .system()
+                    .label(PhysicsLabel::Collision)
+                    .after(PhysicsLabel::Gravity),
+            )
+            .add_system(
+                map_collision_detection
+                    .system()
+                    .label(PhysicsLabel::Collision)
+                    .after(PhysicsLabel::Gravity),
+            )
+            .add_system(
+                sync_position_system
+                    .system()
+                    .label(PhysicsLabel::SyncPosition)
+                    .after(PhysicsLabel::Gravity)
+                    .after(PhysicsLabel::Collision),
+            )
+            .add_system(
+                player_velocity_system
+                    .system()
+                    .label(PhysicsLabel::PlayerVelocity)
+                    .after(PhysicsLabel::Gravity)
+                    .after(PhysicsLabel::Collision)
+                    .after(PhysicsLabel::SyncPosition),
+            );
+        appb.insert_resource(PhysicsTimer(Timer::from_seconds(0.025, true)))
+            .add_stage_after(CoreStage::Update, PHYSICS_SIMULATION, stage);
     }
 }

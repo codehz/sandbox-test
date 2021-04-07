@@ -1,3 +1,4 @@
+use bevy_ecs::prelude::QueryState;
 use glium::{implement_vertex, uniform, Surface};
 
 use super::{Pass, PassContext};
@@ -28,32 +29,37 @@ impl SpriteInfo {
 
 implement_vertex!(SpriteInfo, position, color, radius);
 
-pub struct SpritePass {
+pub struct SpritePass<'w> {
     program: glium::Program,
     points: Option<VertexCache<SpriteInfo>>,
+    qs: Option<QueryState<(&'w Sprite, &'w Position)>>,
 }
 
-impl Pass for SpritePass {
+impl<'w> Pass for SpritePass<'w> {
     fn new(display: &glium::Display) -> anyhow::Result<Self> {
         Ok(Self {
             program: shader_program!(display, "sprite" with geometry)?,
             points: None,
+            qs: None,
         })
     }
 
-    fn prepare(&mut self, context: PassContext<'_>, display: &glium::Display) {
+    fn prepare(&mut self, context: &mut PassContext<'_>, display: &glium::Display) {
         let points = self
             .points
             .get_or_insert_with(|| VertexCache::new(display, 1024));
         let mut writer = VertexWriter::new(points);
-        for (sprite, position) in context.world.query::<(&Sprite, &Position)>() {
+        let query = self
+            .qs
+            .get_or_insert_with(|| context.world.query::<(&Sprite, &Position)>());
+        query.for_each(context.world, |(sprite, position)| {
             writer.write(SpriteInfo::from_entity(position, sprite));
-        }
+        });
     }
 
     fn process(
         &self,
-        context: PassContext<'_>,
+        context: &mut PassContext<'_>,
         provider: &SurfaceProvider,
         display: &glium::Display,
     ) -> anyhow::Result<()> {

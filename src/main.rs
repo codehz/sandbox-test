@@ -1,7 +1,6 @@
 use bevy_app::{App, Plugin};
 use bevy_core::CorePlugin;
-use bevy_ecs::{Commands, IntoSystem};
-use bevy_reflect::ReflectPlugin;
+use bevy_ecs::prelude::*;
 use sandbox_test as lib;
 
 use lib::{
@@ -10,9 +9,9 @@ use lib::{
     renderer::{self, pass::*, RenderPlugin},
 };
 
-fn startup(commands: &mut Commands) {
+fn startup(mut commands: Commands) {
     commands
-        .spawn(EntityBundle {
+        .spawn_bundle(EntityBundle {
             position: (5.0, 70.0, 5.0).into(),
             velocity: (0.0, 0.0, 0.0).into(),
             rotation: Default::default(),
@@ -23,8 +22,7 @@ fn startup(commands: &mut Commands) {
                 head_offset: 1.2,
             },
         })
-        .with(ReceiveGravity)
-        .with(UserControl::default());
+        .insert_bundle((ReceiveGravity, UserControl::default()));
 }
 struct GamePlugin;
 
@@ -48,9 +46,9 @@ impl Plugin for GamePlugin {
                 noise::ScalePoint::new(noise::Worley::new()).set_scale(0.07),
             ),
         );
-        appb.add_resource(camera)
-            .add_resource(control)
-            .add_resource(map)
+        appb.insert_resource(camera)
+            .insert_resource(control)
+            .insert_resource(map)
             .add_startup_system(startup.system());
     }
 }
@@ -62,7 +60,7 @@ pub fn main() {
         .init();
 
     App::build()
-        .add_plugin(ReflectPlugin::default())
+        .insert_resource(bevy_ecs::schedule::ReportExecutionOrderAmbiguities)
         .add_plugin(CorePlugin)
         .add_plugin(GamePlugin)
         .add_plugin(plugins::PhysicsPlugin)

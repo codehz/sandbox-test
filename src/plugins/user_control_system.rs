@@ -1,5 +1,5 @@
-use bevy_app::{stage, EventReader, Events, Plugin};
-use bevy_ecs::{Commands, IntoSystem, Local, Query, Res, ResMut, State, StateStage};
+use bevy_app::{EventReader, Events, Plugin};
+use bevy_ecs::prelude::*;
 
 use crate::{
     common::color,
@@ -13,38 +13,36 @@ use crate::{
     },
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum UserInputState {
     Disabled,
     Enabled,
 }
 
-pub static USER_INPUT_STATE: &str = "user input";
-
-fn init_user_input(mut keyboard_tracing: ResMut<KeyboardTracing>) {
+fn init_user_input(mut commands: Commands) {
     use VirtualKeyCode::*;
-    keyboard_tracing.add_key(Space);
-    keyboard_tracing.add_key(W);
-    keyboard_tracing.add_key(A);
-    keyboard_tracing.add_key(S);
-    keyboard_tracing.add_key(D);
+    let mut tracing = KeyboardTracing::default();
+    tracing.add_key(Space);
+    tracing.add_key(W);
+    tracing.add_key(A);
+    tracing.add_key(S);
+    tracing.add_key(D);
+    commands.insert_resource(tracing);
 }
 
 fn tracing_keyboard_system(
     mut keyboard_tracing: ResMut<KeyboardTracing>,
-    keyboard_events: Res<Events<KeyboardInput>>,
-    mut keyboard_event_reader: Local<EventReader<KeyboardInput>>,
+    mut keyboard_event_reader: EventReader<KeyboardInput>,
 ) {
     keyboard_event_reader
-        .iter(&keyboard_events)
+        .iter()
         .filter_map(|input| input.virtual_keycode.map(|key| (key, input.state)))
         .for_each(|(key, state)| keyboard_tracing.set(key, state));
 }
 
 fn user_input_system(
     control_config: Res<ControlConfig>,
-    mouse_motion_events: Res<Events<MouseMotionEvent>>,
-    mut mouse_motion_event_reader: Local<EventReader<MouseMotionEvent>>,
+    mut mouse_motion_event_reader: EventReader<MouseMotionEvent>,
     keyboard_tracing: Res<KeyboardTracing>,
     mut query: Query<&mut UserControl>,
 ) {
@@ -54,7 +52,7 @@ fn user_input_system(
         Some(it) => it,
         _ => return,
     };
-    for &MouseMotionEvent(x, y) in mouse_motion_event_reader.iter(&mouse_motion_events) {
+    for &MouseMotionEvent(x, y) in mouse_motion_event_reader.iter() {
         let scale = control_config.rotation_scale;
         uc.rotation += glam::vec2(x, y) * scale;
     }
@@ -104,57 +102,53 @@ fn player_camera_system(
     }
 }
 
-fn state_transition<const ENTER: bool>(mut action: ResMut<Events<Action>>) {
+fn mouse_capture<const ENTER: bool>(mut action: ResMut<Events<Action>>) {
     action.send(Action::CaptureMouse(ENTER));
 }
 
 fn handle_in_game(
-    keyboard_events: Res<Events<KeyboardInput>>,
-    mut keyboard_event_reader: Local<EventReader<KeyboardInput>>,
-    focused_events: Res<Events<FocusedEvent>>,
-    mut focused_event_reader: Local<EventReader<FocusedEvent>>,
+    mut keyboard_event_reader: EventReader<KeyboardInput>,
+    mut focused_event_reader: EventReader<FocusedEvent>,
     mut ui_state: ResMut<State<UserInputState>>,
 ) {
     use glium::glutin::event::*;
-    for event in keyboard_event_reader.iter(&keyboard_events) {
+    for event in keyboard_event_reader.iter() {
         if let &KeyboardInput {
             state: ElementState::Pressed,
             virtual_keycode: Some(VirtualKeyCode::Escape),
             ..
         } = event
         {
-            ui_state.set_next(UserInputState::Disabled).unwrap();
+            ui_state.set(UserInputState::Disabled).unwrap();
             return;
         }
     }
-    for event in focused_event_reader.iter(&focused_events) {
+    for event in focused_event_reader.iter() {
         if !event.0 {
-            ui_state.set_next(UserInputState::Disabled).unwrap();
+            ui_state.set(UserInputState::Disabled).unwrap();
             return;
         }
     }
 }
 
 fn handle_paused_game(
-    mouse_button_events: Res<Events<MouseButtonEvent>>,
-    mut mouse_button_event_reader: Local<EventReader<MouseButtonEvent>>,
-    keyboard_events: Res<Events<KeyboardInput>>,
-    mut keyboard_event_reader: Local<EventReader<KeyboardInput>>,
+    mut mouse_button_event_reader: EventReader<MouseButtonEvent>,
+    mut keyboard_event_reader: EventReader<KeyboardInput>,
     mut exit: ResMut<Events<Action>>,
     mut app_state: ResMut<State<UserInputState>>,
 ) {
     use glium::glutin::event::*;
-    for event in mouse_button_event_reader.iter(&mouse_button_events) {
+    for event in mouse_button_event_reader.iter() {
         if let &MouseButtonEvent {
             button: MouseButton::Left,
             state: ElementState::Pressed,
         } = event
         {
-            app_state.set_next(UserInputState::Enabled).unwrap();
+            app_state.set(UserInputState::Enabled).unwrap();
             break;
         }
     }
-    for event in keyboard_event_reader.iter(&keyboard_events) {
+    for event in keyboard_event_reader.iter() {
         if let &KeyboardInput {
             state: ElementState::Pressed,
             virtual_keycode: Some(VirtualKeyCode::Escape),
@@ -170,15 +164,14 @@ fn handle_paused_game(
 fn break_block_system(
     picked: Res<Option<PickedBlock>>,
     mut map: ResMut<Map>,
-    mouse_button_events: Res<Events<MouseButtonEvent>>,
-    mut mouse_button_event_reader: Local<EventReader<MouseButtonEvent>>,
+    mut mouse_button_event_reader: EventReader<MouseButtonEvent>,
 ) {
     use glium::glutin::event::*;
     let picked = match *picked {
         Some(picked) => picked,
         None => return,
     };
-    for event in mouse_button_event_reader.iter(&mouse_button_events) {
+    for event in mouse_button_event_reader.iter() {
         if event.state == ElementState::Released {
             continue;
         }
@@ -232,12 +225,11 @@ fn picking_system(mut picked: ResMut<Option<PickedBlock>>, map: Res<Map>, camera
 }
 
 fn generate_sprite_system(
-    mouse_button_events: Res<Events<MouseButtonEvent>>,
-    mut mouse_button_event_reader: Local<EventReader<MouseButtonEvent>>,
-    commands: &mut Commands,
+    mut mouse_button_event_reader: EventReader<MouseButtonEvent>,
+    mut commands: Commands,
     camera: Res<Camera>,
 ) {
-    for event in mouse_button_event_reader.iter(&mouse_button_events) {
+    for event in mouse_button_event_reader.iter() {
         if event.state == ElementState::Released {
             continue;
         }
@@ -245,7 +237,7 @@ fn generate_sprite_system(
             MouseButton::Middle => {
                 let dir = camera.get_direction();
                 let pos = camera.eye;
-                commands.spawn((
+                commands.spawn_bundle((
                     Sprite {
                         color: color::RED,
                         radius: 0.1,
@@ -261,24 +253,75 @@ fn generate_sprite_system(
 
 pub struct UserInputPlugin;
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemLabel)]
+pub enum UserInputLabel {
+    CameraSystem,
+    StateSwitcher,
+    ResetState,
+    PickingSystem,
+    GameState,
+    PlayerAction,
+    KeyboardTracing,
+    UpdateUserControl,
+}
+
 impl Plugin for UserInputPlugin {
     fn build(&self, appb: &mut bevy_app::AppBuilder) {
-        let mut stat = StateStage::<UserInputState>::default();
-        stat.on_state_update(UserInputState::Disabled, handle_paused_game.system())
-            .on_state_enter(UserInputState::Enabled, state_transition::<true>.system())
-            .on_state_update(UserInputState::Enabled, picking_system.system())
-            .on_state_update(UserInputState::Enabled, handle_in_game.system())
-            .on_state_update(UserInputState::Enabled, generate_sprite_system.system())
-            .on_state_update(UserInputState::Enabled, break_block_system.system())
-            .on_state_update(UserInputState::Enabled, tracing_keyboard_system.system())
-            .on_state_update(UserInputState::Enabled, user_input_system.system())
-            .on_state_exit(UserInputState::Enabled, reset_user_input_system.system())
-            .on_state_exit(UserInputState::Enabled, state_transition::<false>.system());
-        appb.add_resource(KeyboardTracing::default())
-            .add_resource::<Option<PickedBlock>>(None)
-            .add_resource(State::new(UserInputState::Disabled))
-            .add_system(player_camera_system.system())
+        appb.insert_resource(Option::<PickedBlock>::None)
+            .add_state(UserInputState::Disabled)
             .add_startup_system(init_user_input.system())
-            .add_stage_before(stage::UPDATE, USER_INPUT_STATE, stat);
+            .add_system(
+                player_camera_system
+                    .system()
+                    .label(UserInputLabel::CameraSystem),
+            )
+            .add_system_set(
+                SystemSet::on_update(UserInputState::Disabled)
+                    .with_system(handle_paused_game.system().label(UserInputLabel::GameState)),
+            )
+            .add_system_set(
+                SystemSet::on_enter(UserInputState::Enabled)
+                    .with_system(mouse_capture::<true>.system())
+                    .label(UserInputLabel::StateSwitcher),
+            )
+            .add_system_set(
+                SystemSet::on_update(UserInputState::Enabled)
+                    .with_system(
+                        tracing_keyboard_system
+                            .system()
+                            .label(UserInputLabel::KeyboardTracing),
+                    )
+                    .with_system(picking_system.system().label(UserInputLabel::PickingSystem))
+                    .with_system(handle_in_game.system().label(UserInputLabel::GameState))
+                    .with_system(
+                        generate_sprite_system
+                            .system()
+                            .label(UserInputLabel::PlayerAction),
+                    )
+                    .with_system(
+                        break_block_system
+                            .system()
+                            .label(UserInputLabel::PlayerAction),
+                    )
+                    .with_system(
+                        user_input_system
+                            .system()
+                            .label(UserInputLabel::UpdateUserControl),
+                    ),
+            )
+            .add_system_set(
+                SystemSet::on_exit(UserInputState::Enabled)
+                    .with_system(
+                        reset_user_input_system
+                            .system()
+                            .label(UserInputLabel::ResetState)
+                            .after(UserInputLabel::KeyboardTracing),
+                    )
+                    .with_system(
+                        mouse_capture::<false>
+                            .system()
+                            .label(UserInputLabel::StateSwitcher),
+                    ),
+            );
     }
 }

@@ -18,11 +18,11 @@ impl Pass for OutlinePass {
     }
 
     #[inline(always)]
-    fn prepare(&mut self, _context: PassContext, _display: &glium::Display) {}
+    fn prepare(&mut self, _context: &mut PassContext, _display: &glium::Display) {}
 
     fn process(
         &self,
-        _context: PassContext,
+        _context: &mut PassContext,
         provider: &SurfaceProvider,
         display: &glium::Display,
     ) -> anyhow::Result<()> {

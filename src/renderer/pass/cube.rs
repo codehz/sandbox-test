@@ -146,7 +146,7 @@ impl Pass for CubePass {
         })
     }
 
-    fn prepare(&mut self, context: PassContext, display: &glium::Display) {
+    fn prepare(&mut self, context: &mut PassContext, display: &glium::Display) {
         let map = context.map();
         map.iter()
             .filter_map(|(chunk_pos, chunk)| {
@@ -187,7 +187,7 @@ impl Pass for CubePass {
 
     fn process(
         &self,
-        context: PassContext,
+        context: &mut PassContext,
         provider: &SurfaceProvider,
         display: &glium::Display,
     ) -> anyhow::Result<()> {

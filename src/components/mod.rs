@@ -16,7 +16,9 @@ pub use sprite::Sprite;
 pub use user_control::UserControl;
 pub use velocity::Velocity;
 
-#[derive(Debug, Clone, Copy, bevy_ecs::Bundle)]
+use bevy_ecs::prelude::*;
+
+#[derive(Debug, Clone, Copy, Bundle)]
 pub struct EntityBundle {
     pub position: Position,
     pub velocity: Velocity,

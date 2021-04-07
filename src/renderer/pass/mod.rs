@@ -2,7 +2,7 @@ use super::{buffers::SurfaceProvider, camera::Camera};
 use crate::world::Map;
 
 use bevy_app::App;
-use bevy_ecs::ResourceRef;
+use bevy_ecs::prelude::*;
 use hlist::{Cons, Nil};
 
 pub mod cube;
@@ -13,45 +13,51 @@ pub mod strengthen;
 
 mod pp;
 
-#[derive(Clone, Copy)]
 pub struct PassContext<'a> {
-    pub resources: &'a bevy_ecs::Resources,
-    pub world: &'a bevy_ecs::World,
+    pub world: &'a mut World,
     pub view_model: [[f32; 4]; 4],
     pub perspective: [[f32; 4]; 4],
     pub aspect_ratio: f32,
 }
 
 impl<'a> PassContext<'a> {
-    pub fn get_thread_local_res<T>(self) -> ResourceRef<'a, T> {
-        self.resources.get_thread_local().unwrap()
+    pub fn get_thread_local_res<T: 'static>(&'a self) -> &'a T {
+        self.world.get_non_send_resource().unwrap()
     }
-    pub fn get_res<T: Send + Sync>(self) -> ResourceRef<'a, T> {
-        self.resources.get().unwrap()
+    pub fn get_res<T: 'static + Send + Sync>(&'a self) -> &'a T {
+        self.world.get_resource().unwrap()
+    }
+    // pub fn for_each<Q, F>(&mut self, func: F)
+    // where
+    //     Q: WorldQuery,
+    //     Q::Fetch: ReadOnlyFetch,
+    //     F: FnMut(<Q::Fetch as Fetch<'_>>::Item),
+    // {
+    //     let mut query = self.world.query::<Q>();
+    //     query.for_each(self.world, func)
+    // }
+}
+
+impl<'a> PassContext<'a> {
+    pub fn camera(&'a self) -> &'a Camera {
+        self.get_res()
+    }
+    pub fn map(&'a self) -> &'a Map {
+        self.get_res()
     }
 }
 
 impl<'a> PassContext<'a> {
-    pub fn camera(self) -> ResourceRef<'a, Camera> {
-        self.get_res()
-    }
-    pub fn map(self) -> ResourceRef<'a, Map> {
-        self.get_res()
-    }
-}
-
-impl<'a> PassContext<'a> {
-    pub fn create(app: &'a App, display: &glium::Display) -> Self {
+    pub fn create(app: &'a mut App, display: &glium::Display) -> Self {
         let aspect_ratio = {
             let dim = display.get_framebuffer_dimensions();
             dim.0 as f32 / dim.1 as f32
         };
-        let camera: ResourceRef<Camera> = app.resources.get().unwrap();
+        let camera: &Camera = app.world.get_resource().unwrap();
         let view_model = camera.view_model().to_cols_array_2d();
         let perspective = camera.perspective(aspect_ratio).to_cols_array_2d();
         Self {
-            resources: &app.resources,
-            world: &app.world,
+            world: &mut app.world,
             view_model,
             perspective,
             aspect_ratio,
@@ -65,11 +71,11 @@ where
 {
     fn new(display: &glium::Display) -> anyhow::Result<Self>;
 
-    fn prepare(&mut self, context: PassContext<'_>, display: &glium::Display);
+    fn prepare(&mut self, context: &mut PassContext<'_>, display: &glium::Display);
 
     fn process(
         &self,
-        context: PassContext<'_>,
+        context: &mut PassContext<'_>,
         provider: &SurfaceProvider,
         display: &glium::Display,
     ) -> anyhow::Result<()>;
@@ -82,12 +88,12 @@ impl Pass for Nil {
     }
 
     #[inline(always)]
-    fn prepare(&mut self, _context: PassContext<'_>, _display: &glium::Display) {}
+    fn prepare(&mut self, _context: &mut PassContext<'_>, _display: &glium::Display) {}
 
     #[inline(always)]
     fn process(
         &self,
-        _context: PassContext<'_>,
+        _context: &mut PassContext<'_>,
         _provider: &SurfaceProvider,
         _display: &glium::Display,
     ) -> anyhow::Result<()> {
@@ -106,7 +112,7 @@ where
     }
 
     #[inline(always)]
-    fn prepare(&mut self, context: PassContext<'_>, display: &glium::Display) {
+    fn prepare(&mut self, context: &mut PassContext<'_>, display: &glium::Display) {
         self.0.prepare(context, display);
         self.1.prepare(context, display);
     }
@@ -114,7 +120,7 @@ where
     #[inline(always)]
     fn process(
         &self,
-        context: PassContext<'_>,
+        context: &mut PassContext<'_>,
         provider: &SurfaceProvider,
         display: &glium::Display,
     ) -> anyhow::Result<()> {
