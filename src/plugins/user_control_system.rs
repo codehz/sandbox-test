@@ -206,22 +206,25 @@ fn picking_system(mut picked: ResMut<Option<PickedBlock>>, map: Res<Map>, camera
     let size = map.size();
 
     *picked = BlockIter::new(size, position, direction)
-        .take_while(|reslut| reslut.length <= 8.0)
-        .find_map(|result| {
-            let (chunk_pos, block_pos) = result.get_position();
-            map[chunk_pos][block_pos].map(|blk| {
-                match blk {
-                    Block {
-                        data: BlockType::Solid { .. },
-                        ..
-                    } => {}
-                }
-                PickedBlock {
-                    position: result.fine_position,
-                    direction: result.direction,
-                }
-            })
-        });
+        .map(|iter| {
+            iter.take_while(|result| result.length <= 8.0)
+                .find_map(|result| {
+                    let (chunk_pos, block_pos) = result.get_position();
+                    map[chunk_pos][block_pos].map(|blk| {
+                        match blk {
+                            Block {
+                                data: BlockType::Solid { .. },
+                                ..
+                            } => {}
+                        }
+                        PickedBlock {
+                            position: result.fine_position,
+                            direction: result.direction,
+                        }
+                    })
+                })
+        })
+        .flatten();
 }
 
 fn generate_sprite_system(

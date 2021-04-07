@@ -133,19 +133,13 @@ fn get_next_offset_delta(
     )
 }
 
-impl Default for BlockIter {
-    fn default() -> Self {
-        todo!()
-    }
-}
-
 impl BlockIter {
-    pub fn new(size: MapSize, start_position: glam::Vec3A, direction: glam::Vec3A) -> Self {
+    pub fn new(size: MapSize, start_position: glam::Vec3A, direction: glam::Vec3A) -> Option<Self> {
         let direction = match direction.try_normalize() {
             Some(direction) => direction,
             None => return Default::default(),
         };
-        if let Some((origin_point, length)) = get_origin_point(size, start_position, direction) {
+        get_origin_point(size, start_position, direction).map(|(origin_point, length)| {
             let (next_offset, delta) = get_next_offset_delta(origin_point, direction);
             Self {
                 size,
@@ -158,9 +152,7 @@ impl BlockIter {
                 delta,
                 length,
             }
-        } else {
-            Default::default()
-        }
+        })
     }
 
     fn step(&mut self, time: f32) -> Direction {
@@ -301,7 +293,7 @@ mod tests {
             MapSize::new((1, 1)),
             glam::vec3a(0.5, 0.5, 0.5),
             glam::vec3a(1.0, 0.0, 0.0),
-        );
+        ).unwrap();
         assert_eq!(
             iter.next().unwrap().get_position(),
             (ChunkPos(0, 0), BlockSubPos::new(1, 0, 0))
@@ -316,14 +308,14 @@ mod tests {
             MapSize::new((1, 1)),
             glam::vec3a(0.5, 0.5, 0.5),
             glam::vec3a(-1.0, 0.0, 0.0),
-        );
+        ).unwrap();
         assert_eq!(iter.next(), None);
 
         let mut iter = BlockIter::new(
             MapSize::new((1, 1)),
             glam::vec3a(0.5, 0.5, 0.5),
             glam::vec3a(1.0, 1.0, 1.0),
-        );
+        ).unwrap();
         assert_eq!(
             iter.next().unwrap().get_position(),
             (ChunkPos(0, 0), BlockSubPos::new(1, 0, 0))
@@ -341,7 +333,7 @@ mod tests {
             MapSize::new((1, 1)),
             glam::vec3a(0.5, 0.5, 0.5),
             glam::vec3a(0.2, 0.0, 1.0),
-        );
+        ).unwrap();
         assert_eq!(
             iter.next().unwrap().get_position(),
             (ChunkPos(0, 0), BlockSubPos::new(0, 0, 1))
@@ -354,7 +346,7 @@ mod tests {
             MapSize::new((1, 1)),
             glam::vec3a(5.0, 5.0, 5.0),
             glam::vec3a(-0.3, 0.0, 0.12),
-        );
+        ).unwrap();
         assert_eq!(
             iter.next().unwrap().get_position(),
             (ChunkPos(0, 0), BlockSubPos::new(3, 5, 5))
