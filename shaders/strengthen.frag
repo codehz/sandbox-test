@@ -33,9 +33,10 @@ vec3 colorSample(in vec2 pos, in float r) {
   float rz = z_filter * (1.0 - smoothstep(near, far, z));
   float r2 = pow(r, 2.0);
   float rz2 = pow(rz, 2.0);
-  return mix(curcolor * r2 * 1.5, curcolor * 1.0 / Quality * rz2 * r,
-             smoothstep(rz2, rz2 + 0.1, r)) +
-         (curcolor * z_filter * zx.g * 2) + sprite.rgb;
+  return mix(mix(curcolor * r2 * 1.5, curcolor * 1.0 / Quality * rz2 * r,
+                 smoothstep(rz2, rz2 + 0.1, r)) +
+                 (curcolor * z_filter * zx.g * 2),
+             sprite.rgb, sprite.w);
 }
 
 void main() {
