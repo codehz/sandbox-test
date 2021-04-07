@@ -210,13 +210,6 @@ impl Plugin for PhysicsPlugin {
                     .after(PhysicsLabel::Gravity),
             )
             .add_system(
-                sync_position_system
-                    .system()
-                    .label(PhysicsLabel::SyncPosition)
-                    .after(PhysicsLabel::Gravity)
-                    .after(PhysicsLabel::Collision),
-            )
-            .add_system(
                 player_velocity_system
                     .system()
                     .label(PhysicsLabel::PlayerVelocity)
@@ -225,6 +218,11 @@ impl Plugin for PhysicsPlugin {
                     .after(PhysicsLabel::SyncPosition),
             );
         appb.insert_resource(PhysicsTimer(Timer::from_seconds(0.025, true)))
-            .add_stage_after(CoreStage::Update, PHYSICS_SIMULATION, stage);
+            .add_stage_after(CoreStage::Update, PHYSICS_SIMULATION, stage)
+            .add_system(
+                sync_position_system
+                    .system()
+                    .label(PhysicsLabel::SyncPosition),
+            );
     }
 }
