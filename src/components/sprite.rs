@@ -25,7 +25,7 @@ impl IntoAABB for Sprite {
         let diff = glam::Vec3A::splat(radius);
         AABB {
             position: origin - diff,
-            extent3d: origin + diff,
+            extent3d: diff * 2.0,
         }
     }
 }

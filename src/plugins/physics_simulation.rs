@@ -13,9 +13,7 @@ use crate::{
     },
     math::{
         aabb::{IntoAABB, AABB},
-        axis::{
-            DiffAxisExt, ExtractAxis, HasAxis, HasAxisMut, HasAxisMutExt, MapAxisExt, SortAxisExt,
-        },
+        axis::{ExtractAxis, HasAxis, HasAxisMut, MapAxisExt, SortAxisExt},
         bound3d::{Bound3D, LimitRange},
         voxel_bound::VoxelBound,
     },
@@ -139,38 +137,28 @@ fn sprite_collision_system(
     timer_events: Res<Events<PhysicsTick>>,
     mut timer_event_reader: Local<EventReader<PhysicsTick>>,
     map: Res<Map>,
-    mut query: Query<(&mut PhysicsPosition, &mut Velocity, &mut Bound3D, &Sprite)>,
+    mut query: Query<(Entity, &mut PhysicsPosition, &Velocity, &Sprite)>,
+    commands: &mut Commands,
 ) {
     if timer_event_reader.latest(&timer_events).is_none() {
         return;
     }
     let map_bound = Bound3D::from_world(&map.size());
-    for (mut pos, mut vel, mut cached_bound, &sprite) in query.iter_mut() {
-        *cached_bound = Default::default();
-        for axis in vel.sort_axis(|a, b| a.abs() > b.abs()) {
-            let vel_axis = vel.extract_axis(axis);
-            let next_pos: glam::Vec3A = pos.adjust_axis(axis, |val| val + vel_axis);
-            // let aabb = sprite.into_aabb(next_pos);
-            // let mut voxel_bound = VoxelBound::default();
-            // for (target, blk) in map.scan_aabb(aabb) {
-            //     match blk.data {
-            //         crate::world::block::BlockType::Solid { .. } => {}
-            //     }
-            //     let overlapped = AABB::from_block_pos(target) ^ aabb;
-            //     let tmp = VoxelBound::from_aabb_axis(overlapped, axis);
-            //     voxel_bound.merge(tmp);
-            // }
-            // let bound = {
-            //     let mut ret = map_bound;
-            //     ret.limit(axis, Into::<std::ops::Range<_>>::into(voxel_bound));
-            //     ret.shrink_by(glam::Vec2::splat(sprite.radius * 2.0))
-            // };
-            *cached_bound &= map_bound;
-            *pos = map_bound.apply(next_pos);
-            if pos.extract_axis(axis) != next_pos.extract_axis(axis) {
-                vel.apply_axis(axis, |x| -x);
-            }
+    'outer: for (entity, mut pos, vel, &sprite) in query.iter_mut() {
+        let next_pos = pos.0 + vel.0;
+        if map_bound.out_of_bound(next_pos) {
+            commands.despawn(entity);
+            continue 'outer;
         }
+        let aabb = sprite.into_aabb(next_pos);
+        for (_, blk) in map.scan_aabb(aabb) {
+            match blk.data {
+                crate::world::block::BlockType::Solid { .. } => {}
+            }
+            commands.despawn(entity);
+            continue 'outer;
+        }
+        pos.0 = next_pos;
     }
 }
 

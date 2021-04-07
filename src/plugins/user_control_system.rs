@@ -248,10 +248,10 @@ fn generate_sprite_system(
                 commands.spawn((
                     Sprite {
                         color: color::RED,
-                        radius: 0.5,
+                        radius: 0.1,
                     },
                     Position(pos),
-                    Velocity(dir * 0.1),
+                    Velocity(dir * 0.2),
                 ));
             }
             _ => {}

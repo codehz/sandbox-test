@@ -150,6 +150,20 @@ impl Bound3D {
         })
     }
 
+    pub fn out_of_bound<T>(&self, target: T) -> bool
+    where
+        T: ExtractAxis<Target = f32>,
+    {
+        for axis in Axis::iter() {
+            let bound = self.extract_axis(axis);
+            let val = target.extract_axis(axis);
+            if val < bound.start || val > bound.end {
+                return true;
+            }
+        }
+        return false;
+    }
+
     pub fn from_block(center: glam::Vec3A, target: glam::Vec3A) -> Self {
         let limits = LimitMode::from_diff(center, target);
         target.map_axis(move |axis, value| limits.get_axis(axis).calc_block_bound(value))
