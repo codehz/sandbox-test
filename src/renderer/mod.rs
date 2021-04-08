@@ -83,11 +83,37 @@ impl<P: Pass + 'static> RenderPlugin<P> {
             *control_flow = glutin::event_loop::ControlFlow::Poll;
             use glutin::event::*;
             match event {
-                Event::NewEvents(_) => (),
+                Event::MainEventsCleared => {
+                    app.update();
+                    let window = display.gl_window();
+                    let window = window.window();
+                    let action_events = app.world.get_resource_mut().unwrap();
+                    for action in action_reader.iter(&action_events) {
+                        match action {
+                            Action::Exit => {
+                                *control_flow = glutin::event_loop::ControlFlow::Exit;
+                                return;
+                            }
+                            Action::CaptureMouse(capture) => {
+                                window
+                                    .set_cursor_grab(*capture)
+                                    .expect("failed to capture mouse");
+                                window.set_cursor_visible(!*capture);
+                                let size = window.inner_size();
+                                window
+                                    .set_cursor_position(glutin::dpi::PhysicalPosition::new(
+                                        size.width / 2,
+                                        size.height / 2,
+                                    ))
+                                    .expect("failed to set cursor position");
+                            }
+                        }
+                    }
+                    window.request_redraw();
+                }
                 Event::WindowEvent { event, .. } => match event {
                     WindowEvent::CloseRequested => {
                         *control_flow = glutin::event_loop::ControlFlow::Exit;
-                        return;
                     }
                     WindowEvent::Focused(focused) => {
                         send_event(&mut app, FocusedEvent(focused));
@@ -95,7 +121,7 @@ impl<P: Pass + 'static> RenderPlugin<P> {
                     WindowEvent::MouseInput { state, button, .. } => {
                         send_event(&mut app, MouseButtonEvent::new(button, state));
                     }
-                    _ => return,
+                    _ => {}
                 },
                 Event::RedrawRequested(_) => {
                     provider
@@ -122,32 +148,6 @@ impl<P: Pass + 'static> RenderPlugin<P> {
                 }
                 _ => return,
             }
-            app.update();
-            let window = display.gl_window();
-            let window = window.window();
-            let action_events = app.world.get_resource_mut().unwrap();
-            for action in action_reader.iter(&action_events) {
-                match action {
-                    Action::Exit => {
-                        *control_flow = glutin::event_loop::ControlFlow::Exit;
-                        return;
-                    }
-                    Action::CaptureMouse(capture) => {
-                        window
-                            .set_cursor_grab(*capture)
-                            .expect("failed to capture mouse");
-                        window.set_cursor_visible(!*capture);
-                        let size = window.inner_size();
-                        window
-                            .set_cursor_position(glutin::dpi::PhysicalPosition::new(
-                                size.width / 2,
-                                size.height / 2,
-                            ))
-                            .expect("failed to set cursor position");
-                    }
-                }
-            }
-            window.request_redraw();
         });
     }
 }
