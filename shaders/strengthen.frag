@@ -7,7 +7,7 @@ layout(binding = 0, std140) uniform block { float near, far; };
 layout(location = 0) out vec3 color;
 
 const float Directions = 8.0;
-const float Quality = 3.0;
+const float Quality = 8.0;
 const float Pi = 3.14159265359;
 const float Tau = 6.28318530718;
 const float Size = 0.005;
@@ -36,7 +36,7 @@ vec3 colorSample(in vec2 pos, in float r) {
   return mix(mix(curcolor * r2 * 1.5, curcolor * 1.0 / Quality * rz2 * r,
                  smoothstep(rz2, rz2 + 0.1, r)) +
                  (curcolor * z_filter * zx.g * 2),
-             sprite.rgb, sprite.w);
+             sprite.rgb, sprite.w * 4);
 }
 
 void main() {
