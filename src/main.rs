@@ -1,5 +1,8 @@
 use bevy_app::{App, Plugin};
 use bevy_core::CorePlugin;
+use bevy_diagnostic::{
+    DiagnosticsPlugin, EntityCountDiagnosticsPlugin, FrameTimeDiagnosticsPlugin,
+};
 use bevy_ecs::prelude::*;
 use sandbox_test as lib;
 
@@ -63,6 +66,10 @@ pub fn main() {
         .insert_resource(bevy_ecs::schedule::ReportExecutionOrderAmbiguities)
         .add_plugin(CorePlugin)
         .add_plugin(GamePlugin)
+        .add_plugin(DiagnosticsPlugin)
+        .add_plugin(FrameTimeDiagnosticsPlugin)
+        .add_plugin(EntityCountDiagnosticsPlugin)
+        .add_plugin(plugins::UiPlugin)
         .add_plugin(plugins::PhysicsPlugin)
         .add_plugin(plugins::UserInputPlugin)
         .add_plugin(RenderPlugin::<
@@ -71,7 +78,8 @@ pub fn main() {
                 sprite::SpritePass,
                 // debug::DebugPass,
                 outline::OutlinePass,
-                strengthen::StrengthenPass
+                strengthen::StrengthenPass,
+                ui::UiPass
             ),
         >::default())
         .run();

@@ -74,7 +74,8 @@ impl<P: Pass + 'static> RenderPlugin<P> {
         let cb = glutin::ContextBuilder::new();
         let display = glium::Display::new(wb, cb, &event_loop).unwrap();
 
-        let mut pass = P::new(&display).unwrap();
+        let mut context = PassContext::create(&mut app, &display);
+        let mut pass = P::new(&mut context, &display).unwrap();
         let mut provider = SurfaceProvider::new(&display).unwrap();
         let mut action_reader = ManualEventReader::<Action>::default();
 

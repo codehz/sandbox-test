@@ -18,7 +18,7 @@ struct CameraBlock {
 implement_uniform_block!(CameraBlock, near, far);
 
 impl Pass for StrengthenPass {
-    fn new(display: &glium::Display) -> anyhow::Result<Self> {
+    fn new(_context: &mut PassContext<'_>, display: &glium::Display) -> anyhow::Result<Self> {
         Ok(Self {
             program: postprocess_shader_program!(display, "strengthen")?,
             buffer: PostProcessPass::new(display)?,
@@ -45,7 +45,7 @@ impl Pass for StrengthenPass {
         let camera_block = glium::uniforms::UniformBuffer::new(display, strengthen)?;
         let color = provider.get_last_postprocess_sample();
         let altdepth = provider.get_aux_sample();
-        let mut surface = display.draw();
+        let mut surface = provider.get_postprocess_surface(display)?;
         surface.clear_color(0.0, 0.0, 0.0, 1.0);
         let (vertex, index) = (&self.buffer).into();
         let uniforms = uniform! {
@@ -56,7 +56,6 @@ impl Pass for StrengthenPass {
         };
         let draw_parameters = Default::default();
         surface.draw(vertex, index, &self.program, &uniforms, &draw_parameters)?;
-        surface.finish()?;
         Ok(())
     }
 }

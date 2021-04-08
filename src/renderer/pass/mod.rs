@@ -10,6 +10,7 @@ pub mod debug;
 pub mod outline;
 pub mod sprite;
 pub mod strengthen;
+pub mod ui;
 
 mod pp;
 
@@ -69,7 +70,7 @@ pub trait Pass
 where
     Self: Sized,
 {
-    fn new(display: &glium::Display) -> anyhow::Result<Self>;
+    fn new(context: &mut PassContext<'_>, display: &glium::Display) -> anyhow::Result<Self>;
 
     fn prepare(&mut self, context: &mut PassContext<'_>, display: &glium::Display);
 
@@ -83,7 +84,7 @@ where
 
 impl Pass for Nil {
     #[inline(always)]
-    fn new(_display: &glium::Display) -> anyhow::Result<Self> {
+    fn new(_context: &mut PassContext<'_>, _display: &glium::Display) -> anyhow::Result<Self> {
         Ok(Nil)
     }
 
@@ -107,8 +108,8 @@ where
     R: Pass,
 {
     #[inline(always)]
-    fn new(display: &glium::Display) -> anyhow::Result<Self> {
-        Ok(Cons(T::new(display)?, R::new(display)?))
+    fn new(context: &mut PassContext<'_>, display: &glium::Display) -> anyhow::Result<Self> {
+        Ok(Cons(T::new(context, display)?, R::new(context, display)?))
     }
 
     #[inline(always)]

@@ -250,6 +250,14 @@ impl SurfaceProvider {
         Ok(surface)
     }
 
+    pub fn get_last_postprocess_surface<'a, 'display>(
+        &'a self,
+        display: &'display glium::Display,
+    ) -> anyhow::Result<glium::framebuffer::SimpleFrameBuffer<'a>> {
+        let surface = self.buffer.get_postprocess_surface(display)?;
+        Ok(surface)
+    }
+
     pub fn get_aux_sample<'a, 'display>(&'a self) -> Sampler<'a, glium::Texture2d> {
         self.buffer.get_aux_sampled()
     }

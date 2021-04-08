@@ -10,7 +10,7 @@ pub struct OutlinePass {
 }
 
 impl Pass for OutlinePass {
-    fn new(display: &glium::Display) -> anyhow::Result<Self> {
+    fn new(_context: &mut PassContext<'_>, display: &glium::Display) -> anyhow::Result<Self> {
         Ok(Self {
             program: postprocess_shader_program!(display, "outline")?,
             buffer: PostProcessPass::new(display)?,

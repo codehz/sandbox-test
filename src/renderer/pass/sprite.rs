@@ -32,15 +32,15 @@ implement_vertex!(SpriteInfo, position, color, radius);
 pub struct SpritePass<'w> {
     program: glium::Program,
     points: Option<VertexCache<SpriteInfo>>,
-    qs: Option<QueryState<(&'w Sprite, &'w Position)>>,
+    qs: QueryState<(&'w Sprite, &'w Position)>,
 }
 
 impl<'w> Pass for SpritePass<'w> {
-    fn new(display: &glium::Display) -> anyhow::Result<Self> {
+    fn new(context: &mut PassContext<'_>, display: &glium::Display) -> anyhow::Result<Self> {
         Ok(Self {
             program: shader_program!(display, "sprite" with geometry)?,
             points: None,
-            qs: None,
+            qs: context.world.query::<(&Sprite, &Position)>(),
         })
     }
 
@@ -49,10 +49,7 @@ impl<'w> Pass for SpritePass<'w> {
             .points
             .get_or_insert_with(|| VertexCache::new(display, 1024));
         let mut writer = VertexWriter::new(points);
-        let query = self
-            .qs
-            .get_or_insert_with(|| context.world.query::<(&Sprite, &Position)>());
-        query.for_each(context.world, |(sprite, position)| {
+        self.qs.for_each(context.world, |(sprite, position)| {
             writer.write(SpriteInfo::from_entity(position, sprite));
         });
     }

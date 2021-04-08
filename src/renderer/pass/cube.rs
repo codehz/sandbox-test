@@ -139,7 +139,7 @@ fn gen_face(
 }
 
 impl Pass for CubePass {
-    fn new(display: &glium::Display) -> anyhow::Result<Self> {
+    fn new(_context: &mut PassContext<'_>, display: &glium::Display) -> anyhow::Result<Self> {
         Ok(Self {
             program: shader_program!(display, "cube" with geometry)?,
             chunk_cache: Default::default(),
