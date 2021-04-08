@@ -43,7 +43,7 @@ impl Plugin for GamePlugin {
             soft_range: 0.0..64.0,
         };
         let map = lib::world::Map::new(
-            (8, 8),
+            (4, 4),
             lib::world::generator::noise::NoiseGenerator::new(
                 noise::ScalePoint::new(noise::HybridMulti::new()).set_scale(0.03),
                 noise::ScalePoint::new(noise::Worley::new()).set_scale(0.07),

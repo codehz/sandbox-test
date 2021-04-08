@@ -27,3 +27,9 @@ rayon = "1.5.0"
 itertools = "0.10.0"
 noise = "0.7.0"
 imgui = "0.7.0"
+
+[profile.release]
+opt-level = 3
+lto = true
+panic = "abort"
+overflow-checks = false
