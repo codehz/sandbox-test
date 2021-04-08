@@ -60,14 +60,14 @@ impl TextureGroup {
             postprocess: [
                 glium::texture::Texture2d::empty_with_format(
                     disp,
-                    glium::texture::UncompressedFloatFormat::U8U8U8,
+                    glium::texture::UncompressedFloatFormat::F16F16F16,
                     glium::texture::MipmapsOption::NoMipmap,
                     width,
                     height,
                 )?,
                 glium::texture::Texture2d::empty_with_format(
                     disp,
-                    glium::texture::UncompressedFloatFormat::U8U8U8,
+                    glium::texture::UncompressedFloatFormat::F16F16F16,
                     glium::texture::MipmapsOption::NoMipmap,
                     width,
                     height,
