@@ -254,9 +254,10 @@ mod tests {
             );
             let direction = glam::vec3a(-1.0, -2.0, -1.0);
             let direction = direction.normalize();
+            const BOUND: f32 = (Chunk::WIDTH as f32) - 0.5;
             assert_eq!(
                 get_origin_point(size, position, direction),
-                Some((glam::vec3a(7.5, 64.0, 7.5), 1.2247449))
+                Some((glam::vec3a(BOUND, 64.0, BOUND), 1.2247449))
             );
         }
         {
@@ -293,7 +294,8 @@ mod tests {
             MapSize::new((1, 1)),
             glam::vec3a(0.5, 0.5, 0.5),
             glam::vec3a(1.0, 0.0, 0.0),
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(
             iter.next().unwrap().get_position(),
             (ChunkPos(0, 0), BlockSubPos::new(1, 0, 0))
@@ -308,14 +310,16 @@ mod tests {
             MapSize::new((1, 1)),
             glam::vec3a(0.5, 0.5, 0.5),
             glam::vec3a(-1.0, 0.0, 0.0),
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(iter.next(), None);
 
         let mut iter = BlockIter::new(
             MapSize::new((1, 1)),
             glam::vec3a(0.5, 0.5, 0.5),
             glam::vec3a(1.0, 1.0, 1.0),
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(
             iter.next().unwrap().get_position(),
             (ChunkPos(0, 0), BlockSubPos::new(1, 0, 0))
@@ -333,7 +337,8 @@ mod tests {
             MapSize::new((1, 1)),
             glam::vec3a(0.5, 0.5, 0.5),
             glam::vec3a(0.2, 0.0, 1.0),
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(
             iter.next().unwrap().get_position(),
             (ChunkPos(0, 0), BlockSubPos::new(0, 0, 1))
@@ -346,7 +351,8 @@ mod tests {
             MapSize::new((1, 1)),
             glam::vec3a(5.0, 5.0, 5.0),
             glam::vec3a(-0.3, 0.0, 0.12),
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(
             iter.next().unwrap().get_position(),
             (ChunkPos(0, 0), BlockSubPos::new(3, 5, 5))
